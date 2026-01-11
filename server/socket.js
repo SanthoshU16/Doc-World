@@ -17,9 +17,7 @@ module.exports = (io) => {
   io.on("connection", (socket) => {
     let currentRoomId = null;
 
-    /* =======================
-       JOIN ROOM
-    ======================= */
+    /* JOIN ROOM */
     socket.on("join", async ({ roomId, username }) => {
       try {
         if (!roomId || !username) {
@@ -39,7 +37,6 @@ module.exports = (io) => {
         socket.join(roomId);
 
         const clients = getAllConnectedClients(roomId, io);
-
         clients.forEach(({ socketId }) => {
           io.to(socketId).emit("joined", {
             clients,
@@ -47,16 +44,13 @@ module.exports = (io) => {
             socketId: socket.id,
           });
         });
-
       } catch (err) {
         console.error("[JOIN ERROR]", err);
         socket.emit("join-error", "Server error while joining");
       }
     });
 
-    /* =======================
-       LOAD DOCUMENT
-    ======================= */
+    /* LOAD DOCUMENT */
     socket.on("get-document", async ({ roomId }) => {
       try {
         if (!roomId) return;
@@ -69,19 +63,15 @@ module.exports = (io) => {
 
         socket.emit("load-document", document.data);
       } catch (err) {
-        console.error("[GET-DOCUMENT ERROR]", err);
+        console.error("[GET DOCUMENT ERROR]", err);
         socket.emit("document-error", "Failed to load document");
       }
     });
 
-    /* =======================
-       DOCUMENT SYNC
-    ======================= */
+    /* REALTIME SYNC */
     socket.on("send-changes", (delta) => {
       if (!currentRoomId) return;
-      socket.broadcast
-        .to(currentRoomId)
-        .emit("receive-changes", delta);
+      socket.broadcast.to(currentRoomId).emit("receive-changes", delta);
     });
 
     socket.on("save-document", async (data) => {
@@ -89,9 +79,7 @@ module.exports = (io) => {
       await Document.findByIdAndUpdate(currentRoomId, { data });
     });
 
-    /* =======================
-       DISCONNECT
-    ======================= */
+    /* DISCONNECT */
     socket.on("disconnect", () => {
       if (currentRoomId) {
         socket.to(currentRoomId).emit("disconnected", {
@@ -103,9 +91,6 @@ module.exports = (io) => {
     });
   });
 
-  /* =======================
-     DB HELPERS
-  ======================= */
   async function findOrCreateDocument(id) {
     if (!id) return null;
 
