@@ -15,6 +15,7 @@ module.exports = (io) => {
   const defaultValue = "";
 
   io.on("connection", (socket) => {
+    let currentRoomId = null;
 
     /* =======================
        JOIN ROOM
@@ -26,7 +27,6 @@ module.exports = (io) => {
           return;
         }
 
-        // Ensure document exists
         const document = await findOrCreateDocument(roomId);
         if (!document) {
           socket.emit("join-error", "Invalid Space ID");
@@ -34,8 +34,8 @@ module.exports = (io) => {
         }
 
         userSocketMap[socket.id] = username;
+        currentRoomId = roomId;
 
-        // ✅ JOIN FIRST (CRITICAL FIX)
         socket.join(roomId);
 
         const clients = getAllConnectedClients(roomId, io);
@@ -67,17 +67,7 @@ module.exports = (io) => {
           return;
         }
 
-        socket.join(roomId);
         socket.emit("load-document", document.data);
-
-        socket.on("send-changes", (delta) => {
-          socket.broadcast.to(roomId).emit("receive-changes", delta);
-        });
-
-        socket.on("save-document", async (data) => {
-          await Document.findByIdAndUpdate(roomId, { data });
-        });
-
       } catch (err) {
         console.error("[GET-DOCUMENT ERROR]", err);
         socket.emit("document-error", "Failed to load document");
@@ -85,18 +75,30 @@ module.exports = (io) => {
     });
 
     /* =======================
+       DOCUMENT SYNC
+    ======================= */
+    socket.on("send-changes", (delta) => {
+      if (!currentRoomId) return;
+      socket.broadcast
+        .to(currentRoomId)
+        .emit("receive-changes", delta);
+    });
+
+    socket.on("save-document", async (data) => {
+      if (!currentRoomId) return;
+      await Document.findByIdAndUpdate(currentRoomId, { data });
+    });
+
+    /* =======================
        DISCONNECT
     ======================= */
-    socket.on("disconnecting", () => {
-      const rooms = [...socket.rooms];
-
-      rooms.forEach((roomId) => {
-        socket.to(roomId).emit("disconnected", {
+    socket.on("disconnect", () => {
+      if (currentRoomId) {
+        socket.to(currentRoomId).emit("disconnected", {
           socketId: socket.id,
           username: userSocketMap[socket.id],
         });
-      });
-
+      }
       delete userSocketMap[socket.id];
     });
   });
