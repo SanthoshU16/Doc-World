@@ -1,12 +1,13 @@
 import { io } from "socket.io-client";
 
-export const initSocket = async () => {
-    const options = {
-        forceNew: true,
-        reconnectionAttempts: Infinity,
-        timeout: 10000,
-        transports: ["websocket"],
-    };
+const BACKEND_URL =
+  process.env.REACT_APP_BACKEND_URL ||
+  "https://doc-world.onrender.com"; // fallback
 
-    return io(process.env.REACT_APP_BACKEND_URL, options);
+export const initSocket = () => {
+  return io(BACKEND_URL, {
+    transports: ["websocket"],
+    reconnectionAttempts: Infinity,
+    timeout: 10000,
+  });
 };
