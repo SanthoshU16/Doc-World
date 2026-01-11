@@ -8,23 +8,35 @@ const documentSocket = require("./socket");
 const app = express();
 const server = http.createServer(app);
 
-app.use(cors());
+/* ====================== MIDDLEWARE ====================== */
+app.use(
+  cors({
+    origin: [
+      "https://docworld-gamma.vercel.app",
+      /\.vercel\.app$/,
+    ],
+    methods: ["GET", "POST"],
+    credentials: true,
+  })
+);
+
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-// Health check (IMPORTANT)
-app.get("/health", (req, res) => res.send("OK"));
+/* ====================== HEALTH CHECK ====================== */
+app.get("/health", (req, res) => {
+  res.status(200).send("OK");
+});
 
-// MongoDB (PRODUCTION SAFE)
+/* ====================== MONGODB ====================== */
 mongoose
-  .connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("MongoDB Connected"))
-  .catch(console.error);
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch((err) => {
+    console.error("❌ MongoDB connection error:", err);
+  });
 
-// Socket.IO
+/* ====================== SOCKET.IO ====================== */
 const io = socketIo(server, {
   cors: {
     origin: [
@@ -34,11 +46,16 @@ const io = socketIo(server, {
     methods: ["GET", "POST"],
     credentials: true,
   },
+  transports: ["websocket"],
+  pingTimeout: 60000,
+  pingInterval: 25000,
 });
 
 documentSocket(io);
 
+/* ====================== START SERVER ====================== */
 const PORT = process.env.PORT || 3001;
+
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
