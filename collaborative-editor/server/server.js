@@ -16,12 +16,13 @@ const HTMLtoDOCX = require("html-to-docx");
 
 // MongoDB Connection
 mongoose
-    .connect("mongodb://localhost:27017/collaborative-editor", {
+      .connect(process.env.MONGO_URI, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
-    })
-    .then(() => console.log("MongoDB Connected"))
-    .catch((err) => console.log(err));
+      })
+      .then(() => console.log("MongoDB Connected"))
+      .catch((err) => console.log("MongoDB connection error:", err));
+
 
 // Socket.IO Setup
 const io = socketIo(server, {
